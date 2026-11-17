@@ -9,14 +9,25 @@ Grupo 1: Andoni Garrido, Jon Larrañaga
 SCANIA Component X Dataset (v3), Scania CV AB y Universidad de Estocolmo. CC BY 4.0.
 Descarga: https://doi.org/10.5878/bnh5-ka77
 
-Los 9 CSV van en `data/raw/` (no se suben al repositorio).
+Los datos no se suben al repositorio (1,5 GB; GitHub no admite ficheros de más de 100 MB).
+
+1. Descarga el dataset desde https://doi.org/10.5878/bnh5-ka77
+2. Copia los 9 CSV en `data/raw/`:
+   - `train_operational_readouts.csv`, `train_tte.csv`, `train_specifications.csv`
+   - `validation_operational_readouts.csv`, `validation_labels.csv`, `validation_specifications.csv`
+   - `test_operational_readouts.csv`, `test_labels.csv`, `test_specifications.csv`
+3. Comprueba que están y genera los Parquet:
+   ```bash
+   python -m src.data --check   # solo comprueba
+   python -m src.data           # comprueba y convierte a Parquet en data/processed/
+   ```
 
 ## Estructura
 ```
 data/raw/         CSV originales (fuera de git)
 data/processed/   Parquet unidos y limpios (fuera de git)
 notebooks/        01_ingesta, 02_limpieza, 03_eda, 04_features, 05_modelado, 06_evaluacion
-src/              Código reutilizable (carga, features, coste)
+src/              Código reutilizable (data.py: rutas, carga, Parquet, matriz de costes)
 models/           Modelos entrenados (fuera de git)
 app/              Dashboard Streamlit
 service/          Servicio de predicción BentoML

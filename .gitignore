@@ -1,0 +1,27 @@
+# Datos (1,5 GB, no se suben)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Modelos entrenados
+models/*
+!models/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.env
+
+# BentoML / Streamlit
+bentoml/
+.streamlit/secrets.toml
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

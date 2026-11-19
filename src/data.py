@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.csv as pv
@@ -121,6 +122,31 @@ def build_parquet(overwrite: bool = False) -> None:
             print(f"  {n:>9,} filas  {src.name} -> {dst.name} ({dst.stat().st_size / 1e6:.1f} MB)")
 
 
+def _is_sorted(df: pd.DataFrame) -> bool:
+    v, t = df["vehicle_id"].to_numpy(), df["time_step"].to_numpy()
+    dv = np.diff(v)
+    return bool((dv >= 0).all() and (np.diff(t)[dv == 0] >= 0).all())
+
+
+def _read_readouts(path: Path, float32: bool = False) -> pd.DataFrame:
+    """Lee un Parquet de lecturas por bloques (convirtiendo a float32 si se pide)
+    y lo devuelve ordenado por vehicle_id y time_step sin copias innecesarias."""
+    pf = pq.ParquetFile(path)
+    if float32:
+        schema = pa.schema([
+            pa.field(f.name, pa.float32() if f.name in SENSOR_COLUMNS else f.type)
+            for f in pf.schema_arrow
+        ])
+        table = pa.Table.from_batches((b.cast(schema) for b in pf.iter_batches()), schema=schema)
+    else:
+        table = pf.read()
+    df = table.to_pandas(self_destruct=True)
+    del table
+    if not _is_sorted(df):
+        df = df.sort_values(["vehicle_id", "time_step"], kind="stable").reset_index(drop=True)
+    return df
+
+
 def load_split(split: str, float32: bool = False) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Devuelve (lecturas, especificaciones, etiquetas) de un conjunto.
 
@@ -130,15 +156,7 @@ def load_split(split: str, float32: bool = False) -> tuple[pd.DataFrame, pd.Data
     """
     if split not in SPLITS:
         raise ValueError(f"split debe ser uno de {SPLITS}")
-    table = pq.read_table(PROCESSED / f"{split}_operational_readouts.parquet")
-    if float32:
-        table = table.cast(pa.schema([
-            pa.field(f.name, pa.float32() if f.name in SENSOR_COLUMNS else f.type)
-            for f in table.schema
-        ]))
-    readouts = table.to_pandas()
-    del table
-    readouts = readouts.sort_values(["vehicle_id", "time_step"], kind="stable").reset_index(drop=True)
+    readouts = _read_readouts(PROCESSED / f"{split}_operational_readouts.parquet", float32)
     specs = pd.read_parquet(PROCESSED / f"{split}_specifications.parquet")
     specs[SPEC_COLUMNS] = specs[SPEC_COLUMNS].astype("category")
     labels = pd.read_parquet(PROCESSED / f"{label_file(split).removesuffix('.csv')}.parquet")

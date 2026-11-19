@@ -113,7 +113,9 @@ def fix_resets(readouts: pd.DataFrame, cols: list[str]) -> np.ndarray:
         if not (drop > 0).any():
             continue
         events[:, j] = (drop > 0).to_numpy()
-        readouts[c] = x + drop.groupby(vid, sort=False).cumsum()
+        corrected = x + drop.groupby(vid, sort=False).cumsum()
+        # el máximo acumulado elimina restos de redondeo (p. ej. -5e-14) de la suma
+        readouts[c] = corrected.groupby(vid, sort=False).cummax()
     return events
 
 
